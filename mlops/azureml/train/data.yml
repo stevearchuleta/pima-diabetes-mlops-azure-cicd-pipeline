@@ -1,0 +1,16 @@
+# ========================================================================================
+# AZURE ML DATASET CONFIGURATION FILE
+# ========================================================================================
+$schema: https://azuremlschemas.azureedge.net/latest/data.schema.json
+
+# ==================================================
+# DATASET TYPE
+# ==================================================
+type: uri_file  # Change to `uri_folder` if referencing a directory
+
+# ==================================================
+# PROJECT-SPECIFIC SETTINGS (CHANGE PER PROJECT)
+# ==================================================
+name: pima-diabetes-data  # Change per project (e.g., )
+description: Dataset for pima indians diabetes prediction  # Update for each dataset
+path: ../../../data/pima.csv  # Adjust the path to match each project's dataset
