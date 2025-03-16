@@ -6,9 +6,15 @@ C:.
 |   requirements.txt
 |   
 +---.github
+|   \---workflows
+|           deploy-model-training-pipeline-classical.yml
+|           
 +---data
 |       pima.csv
 |       
 +---data-science
+|   \---environment
+|           train-conda.yml
+|           
 \---mlops
     \---azureml

@@ -1,0 +1,88 @@
+# ========================================================================================
+# GITHUB ACTIONS WORKFLOW FOR TRAINING AND DEPLOYING PIMA DIABETES ML PIPELINE ON AZURE ML 
+# ========================================================================================
+name: deploy-model-training-pipeline
+
+# ================================================== 
+# WORKFLOW TRIGGERS - PUSH TO main - PULLS FROM main
+# ==================================================
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  # ====================================================================
+  # ADD MANUAL TRIGGER (workflow_dispatch) TO ALLOW FOR MANUAL EXECUTION
+  # ====================================================================
+  workflow_dispatch:
+
+jobs:
+
+  # ==================================================================================
+  # READ CONFIGURATION FILE - READS AZURE ML CONFIGURATIONS FROM config-infra-prod.yml
+  # ==================================================================================
+  get-config:
+      uses: Azure/mlops-templates/.github/workflows/read-yaml.yml@main
+      with:
+        file_name: config-infra-prod.yml
+
+  # ============================================= 
+  # CREATE AZURE ML COMPUTE CLUSTER - cpu_cluster
+  # =============================================
+  create-compute:
+      needs: get-config
+      uses: Azure/mlops-templates/.github/workflows/create-compute.yml@main
+      with:
+        cluster_name: ${{ needs.get-config.outputs.compute_cluster_name }} # ==== CLUSTER NAME FROM CONFIG ====
+        size: Standard_DS11_v2 # ==== MACHINE TYPE ====
+        min_instances: 0 # ==== MINIMUM COMPUTE NODES ====
+        max_instances: 1 # ==== MAXIMUM COMPUTE NODES ====
+        cluster_tier: dedicated # ==== COMPUTE CLUSTER TYPE ====
+        resource_group: ${{ needs.get-config.outputs.resource_group }} # ==== RESOURCE GROUP ====
+        workspace_name: ${{ needs.get-config.outputs.aml_workspace }} # ==== AZURE ML WORKSPACE ====
+      secrets:
+          creds: ${{secrets.AZURE_CREDENTIALS}}
+
+  # =================================================== 
+  # REGISTER DATASET WITH AZURE ML - PIMA DIABETES DATA
+  # ===================================================
+  register-dataset:
+    needs: get-config
+    uses: Azure/mlops-templates/.github/workflows/register-dataset.yml@main
+    with:
+      resource_group: ${{ needs.get-config.outputs.resource_group }}
+      workspace_name: ${{ needs.get-config.outputs.aml_workspace }}
+      name: pima-diabetes-data # ==== REGISTERED DATASET NAME ====
+      data_file: mlops/azureml/train/data.yml # ==== PATH TO DATASET CONFIGURATION ====
+    secrets:
+      creds: ${{secrets.AZURE_CREDENTIALS}}
+
+  # =================================================================
+  # REGISTER AZURE ML ENVIRONMENT FOR TRAINING - INSTALL DEPENDENCIES 
+  # =================================================================
+  register-environment:
+      needs: get-config
+      uses: Azure/mlops-templates/.github/workflows/register-environment.yml@main
+      with:
+        resource_group: ${{ needs.get-config.outputs.resource_group }}
+        workspace_name: ${{ needs.get-config.outputs.aml_workspace }}
+        environment_file: mlops/azureml/train/train-env.yml # ==== ENVIRONMENT CONFIG FILE ====
+        conda_file: data-science/environment/train-conda.yml # ==== CONDA ENVIRONMENT FILE ====
+      secrets:
+          creds: ${{secrets.AZURE_CREDENTIALS}}
+
+  # ================================================
+  # RUN TRAINING PIPELINE mlops-pipeline IN AZURE ML 
+  # ================================================
+  run-pipeline:
+      needs: [get-config, register-environment, create-compute, register-dataset]
+      uses: Azure/mlops-templates/.github/workflows/run-pipeline.yml@main
+      with:
+        resource_group: ${{ needs.get-config.outputs.resource_group }}
+        workspace_name: ${{ needs.get-config.outputs.aml_workspace }}
+        parameters-file: mlops/azureml/train/newpipeline.yml # ==== TRAINING PIPELINE CONFIG ====
+        job-name: pima-diabetes-mlops-pipeline # ==== JOB NAME IN AZURE ML ====
+      secrets:
+          creds: ${{secrets.AZURE_CREDENTIALS}}
