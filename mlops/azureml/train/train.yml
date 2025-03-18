@@ -1,0 +1,54 @@
+# ========================================================================================
+# TRAINING CONFIGURATION FILE FOR PIMA DIABETES PREDICTION MODEL
+# ========================================================================================
+$schema: https://azuremlschemas.azureedge.net/latest/commandComponent.schema.json
+type: command  # ==== DEFINES TRAINING JOB IN AZURE ML ====
+
+# =========================
+# PROJECT-SPECIFIC SETTINGS
+# =========================
+name: train_pima_diabetes_model  # ==== UNIQUE COMPONENT NAME ====
+display_name: train_pima_diabetes_model  # ==== DISPLAY NAME IN AZURE ML ====
+
+# =====================
+# INPUT DATA REFERENCES
+# =====================
+inputs: 
+  train_data:
+    type: uri_folder  # ==== TRAINING DATA LOCATION ====
+  test_data:
+    type: uri_folder  # ==== TEST DATA LOCATION ====
+  max_depth:
+    type: integer
+    default: 5  # ==== MAXIMUM TREE DEPTH ====
+  learning_rate:
+    type: float
+    default: 0.1  # ==== LEARNING RATE FOR BOOSTING ====
+  n_estimators:
+    type: integer
+    default: 100  # ==== NUMBER OF BOOSTING ROUNDS ====
+
+# ====================
+# OUTPUT CONFIGURATION
+# ====================
+outputs:
+  model_output:
+    type: mlflow_model  # ==== OUTPUT SAVED AS MLFLOW MODEL ====
+
+# ======================
+# TRAINING JOB EXECUTION
+# ======================
+code: ../../../data-science/src  # ==== LOCATION OF TRAINING SCRIPT ====
+command: >-
+  python train.py 
+  --train_data ${{inputs.train_data}}
+  --test_data ${{inputs.test_data}}
+  --max_depth ${{inputs.max_depth}}
+  --learning_rate ${{inputs.learning_rate}}
+  --n_estimators ${{inputs.n_estimators}}
+  --model_output ${{outputs.model_output}}
+
+# ==============================
+# TRAINING ENVIRONMENT REFERENCE
+# ==============================
+environment: azureml:pima-diabetes-train-env@latest  # ==== USES PREDEFINED TRAINING ENVIRONMENT ====
