@@ -1,0 +1,60 @@
+# ========================================================================================
+# AZURE ML TRAINING PIPELINE CONFIGURATION FILE - PIMA DIABETES
+# ========================================================================================
+$schema: https://azuremlschemas.azureedge.net/latest/pipelineJob.schema.json
+type: pipeline
+
+# ==================================================
+# PROJECT-SPECIFIC SETTINGS
+# ==================================================
+display_name: pima_diabetes_training_pipeline  # ==== UNIQUE PIPELINE NAME FOR PIMA DIABETES ====
+experiment_name: pima-diabetes-training  # ==== EXPERIMENT NAME IN AZURE ML ====
+description: Training Pipeline for Pima Diabetes Prediction
+
+# ==================================================
+# INPUT DATA REFERENCE
+# ==================================================
+inputs:
+  input:
+    type: uri_file  # ==== INPUT DATA TYPE: FILE ====
+    path: azureml:pima-diabetes-data@latest  # ==== DATASET REFERENCE IN AZURE ML ====
+
+# ==================================================
+# OUTPUT CONFIGURATION
+# ==================================================
+outputs:
+  train_data:  # ==== OUTPUT TRAINING DATA PATH ====
+  test_data:  # ==== OUTPUT TEST DATA PATH ====
+  model_info_output_path:  # ==== OUTPUT MODEL METADATA PATH ====
+
+# ==================================================
+# PIPELINE SETTINGS
+# ==================================================
+settings:
+  default_datastore: azureml:workspaceblobstore  # ==== DEFAULT AZURE ML DATASTORE ====
+  default_compute: azureml:cpu-cluster  # ==== COMPUTE CLUSTER FOR PIPELINE EXECUTION ====
+  continue_on_step_failure: false  # ==== HALT EXECUTION IF A STEP FAILS ====
+
+# ==================================================
+# PIPELINE JOBS - PREPROCESSING, TRAINING, MODEL REGISTRATION
+# ==================================================
+jobs:
+
+  # =====================================
+  # PREPROCESSING JOB - DATA PREPARATION
+  # =====================================
+  prep_data:
+    name: prep_data  # ==== JOB NAME: DATA PREPROCESSING ====
+    display_name: prep-data  # ==== FRIENDLY DISPLAY NAME ====
+    code: ../../../data-science/src  # ==== LOCATION OF SCRIPT FILES ====
+    command: >-  # ==== EXECUTION COMMAND ====
+      python prep.py 
+      --raw_data ${{inputs.raw_data}} 
+      --train_data ${{outputs.train_data}}
+      --test_data ${{outputs.test_data}}
+    environment: azureml:pima-diabetes-train-env@latest  # ==== SPECIFIED TRAINING ENVIRONMENT ====
+    inputs:
+      raw_data: ${{parent.inputs.input}}  # ==== RAW INPUT DATA ====
+    outputs:
+      train_data: ${{parent.outputs.train_data}}  # ==== TRAINING DATA OUTPUT ====
+      test_data: ${{parent.outputs.test_data}}  # ==== TEST DATA OUTPUT ====
